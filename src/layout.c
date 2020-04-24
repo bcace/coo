@@ -43,6 +43,14 @@ void _init_alloc(CooAlloc *a, struct CooType *type, CooIndirection indirection) 
     a->old_first = 0;
 }
 
+void _clear_alloc(CooAlloc *a) {
+    while (a->first) {
+        CooTag *tag = a->first;
+        a->first = a->first->next;
+        free(tag);
+    }
+}
+
 static void _apply_diffs(CooType *t, char *src_mem, char *dst_mem) {
     for (int i = 0; i < t->diffs_count; ++i) {
         CooDiff *d = t->diffs + i;

@@ -4,7 +4,7 @@
 #include <assert.h>
 
 
-void coo_test_alloc() {
+void coo_test_basics() {
     CooState *coo = coo_create_state();
 
     /* create a new empty type and allocate one object */
@@ -14,7 +14,7 @@ void coo_test_alloc() {
     coo_begin_update(coo);
     coo_end_update(coo);
 
-    void *a = coo_alloc(A_alloc, 1);
+    void *a0 = coo_alloc(A_alloc, 1);
 
     /* add one integer variable to the type and check that its value is zeroed */
 
@@ -24,12 +24,12 @@ void coo_test_alloc() {
 
     coo_add_var(A_type, "a", &CooI32);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A1 *a1 = coo_update_pointer(a0);
     coo_end_update(coo);
 
-    assert(((A1 *)a)->a == 0);
+    assert(a1->a == 0);
 
-    ((A1 *)a)->a = 13;
+    a1->a = 13;
 
     /* add another variable and verify that it retained its value after update */
 
@@ -40,20 +40,20 @@ void coo_test_alloc() {
 
     coo_ins_var(A_type, "b", &CooI32, 0);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A2 *a2 = coo_update_pointer(a1);
     coo_end_update(coo);
 
-    assert(((A2 *)a)->a == 13);
-    assert(((A2 *)a)->b == 0);
+    assert(a2->a == 13);
+    assert(a2->b == 0);
 
     /* remove newly created variable and verify the retained value */
 
     coo_remove_var(A_type, "b");
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    a1 = coo_update_pointer(a2);
     coo_end_update(coo);
 
-    assert(((A1 *)a)->a == 13);
+    assert(a1->a == 13);
 
     /* change variable into an array and back and verify value */
 
@@ -63,18 +63,18 @@ void coo_test_alloc() {
 
     coo_resize_array(A_type, "a", 10);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A3 *a3 = coo_update_pointer(a1);
     coo_end_update(coo);
 
-    assert(((A3 *)a)->a[0] == 13);
-    assert(((A3 *)a)->a[9] == 0);
+    assert(a3->a[0] == 13);
+    assert(a3->a[9] == 0);
 
     coo_resize_array(A_type, "a", 1);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    a1 = coo_update_pointer(a3);
     coo_end_update(coo);
 
-    assert(((A1 *)a)->a == 13);
+    assert(a1->a == 13);
 
     /* add variables and move them around */
 
@@ -87,13 +87,13 @@ void coo_test_alloc() {
     coo_add_var(A_type, "b", &CooI32);
     coo_add_var(A_type, "c", &CooI32);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A4 *a4 = coo_update_pointer(a1);
     coo_end_update(coo);
 
-    assert(((A4 *)a)->a == 13);
+    assert(a4->a == 13);
 
-    ((A4 *)a)->b = 14;
-    ((A4 *)a)->c = 15;
+    a4->b = 14;
+    a4->c = 15;
 
     typedef struct {
         int c;
@@ -104,12 +104,12 @@ void coo_test_alloc() {
     coo_move_var(A_type, "b", 0);
     coo_move_var(A_type, "c", 0);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A5 *a5 = coo_update_pointer(a4);
     coo_end_update(coo);
 
-    assert(((A5 *)a)->a == 13);
-    assert(((A5 *)a)->b == 14);
-    assert(((A5 *)a)->c == 15);
+    assert(a5->a == 13);
+    assert(a5->b == 14);
+    assert(a5->c == 15);
 
     /* change types of variables and verify values */
 
@@ -123,84 +123,152 @@ void coo_test_alloc() {
     coo_retype_var(A_type, "b", &CooF32);
     coo_retype_var(A_type, "c", &CooI64);
     coo_begin_update(coo);
-    a = coo_update_pointer(a);
+    A6 *a6 = coo_update_pointer(a5);
     coo_end_update(coo);
 
-    assert(((A6 *)a)->a == 13.0);
-    assert(((A6 *)a)->b == 0.0f); /* because of loss of data */
-    assert(((A6 *)a)->c == 15ll);
+    assert(a6->a == 13.0); /* implicit cast */
+    assert(a6->b == 0.0f); /* zeroed because of loss of data */
+    assert(a6->c == 15ll); /* implicit cast */
 
-    /* delete old object and create a new array of objects */
+    coo_destroy_state(coo);
+}
 
-    coo_free(A_alloc, a);
-    a = coo_alloc(A_alloc, 10);
+void coo_test_pointers() {
+    CooState *coo = coo_create_state();
 
-    assert(((A6 *)a)[9].a == 0.0);
-    assert(((A6 *)a)[9].b == 0.0f);
-    assert(((A6 *)a)[9].c == 0ll);
+    /* make linked list */
 
-    /* create 10 objects and link them in a list */
-
-    typedef struct A7 {
+    typedef struct A1 {
         int a;
-        struct A7 *next;
-    } A7;
+        struct A1 *next;
+    } A1;
 
-    coo_free(A_alloc, a);
-    coo_retype_var(A_type, "a", &CooI32);
-    coo_remove_var(A_type, "b");
-    coo_remove_var(A_type, "c");
+    CooType *A_type = coo_create_type(coo, "A");
+    CooAlloc *A_alloc = coo_get_alloc(coo, A_type);
+    coo_begin_update(coo);
+    coo_end_update(coo);
+
+    coo_add_var(A_type, "a", &CooI32);
     coo_add_ptr_var(A_type, "next", A_type);
     coo_begin_update(coo);
     coo_end_update(coo);
 
-    A7 *a7_root = coo_alloc(A_alloc, 1);
-    A7 *a7_prev = a7_root;
+    A1 *a1_root = coo_alloc(A_alloc, 1);
+    A1 *a1_prev = a1_root;
     for (int i = 1; i < 10; ++i) {
-        A7 *e = coo_alloc(A_alloc, 1);
-        e->a = i;
-        a7_prev->next = e;
-        a7_prev = e;
+        A1 *a1 = coo_alloc(A_alloc, 1);
+        a1->a = i;
+        a1_prev->next = a1;
+        a1_prev = a1;
     }
 
     /* swap variables and verify that the list is still linked correctly */
 
-    typedef struct A8 {
-        struct A8 *next;
+    typedef struct A2 {
+        struct A2 *next;
         int a;
-    } A8;
+    } A2;
 
     coo_move_var(A_type, "a", 1);
     coo_begin_update(coo);
-    A8 *a8_root = coo_update_pointer(a7_root);
+    A2 *a2_root = coo_update_pointer(a1_root);
     coo_end_update(coo);
 
-    int e_a = 0;
-    for (A8 *e = a8_root; e; e = e->next, ++e_a)
-        assert(e->a == e_a);
+    int a2_i = 0;
+    for (A2 *a2 = a2_root; a2; a2 = a2->next, ++a2_i)
+        assert(a2->a == a2_i);
 
     /* allocate an array of pointers to structs and link them to elements in list */
 
     CooAlloc *A_alloc_ptrs = coo_get_ptr_alloc(coo, A_type);
-    A8 **v8 = coo_alloc(A_alloc_ptrs, 10);
+    A2 **v2 = coo_alloc(A_alloc_ptrs, 10);
 
-    for (A8 *e = a8_root; e; e = e->next)
-        v8[e->a] = e;
+    for (A2 *a2 = a2_root; a2; a2 = a2->next)
+        v2[a2->a] = a2;
 
     /* swap A type fields back and verify that array pointers are correct */
 
     coo_move_var(A_type, "a", 0);
     coo_begin_update(coo);
-    a7_root = coo_update_pointer(a8_root);
-    A7 **v7 = (A7 **)v8; /* array of pointers is not updateable, just cast */
+    a1_root = coo_update_pointer(a2_root);
     coo_end_update(coo);
 
-    for (int i = 0; i < 10; ++i)
-        assert(v7[i]->a == i);
+    A1 **v1 = (A1 **)v2; /* array of pointers is not updateable, just cast */
 
-    /* destroy coo state */
+    for (int i = 0; i < 10; ++i)
+        assert(v1[i]->a == i);
 
     coo_destroy_state(coo);
+}
 
-    printf("Alloc test OK.\n");
+void coo_test_struct_composition() {
+    CooState *coo = coo_create_state();
+
+    typedef struct {
+        char c;
+        int i[10];
+        short s;
+    } A1;
+
+    typedef struct {
+        char c;
+        A1 a;
+        double d;
+    } B1;
+
+    CooType *A_type = coo_create_type(coo, "A");
+    CooAlloc *A_alloc = coo_get_alloc(coo, A_type);
+    coo_add_var(A_type, "c", &CooI8);
+    coo_add_arr(A_type, "i", &CooI32, 10);
+    coo_add_var(A_type, "s", &CooI16);
+
+    CooType *B_type = coo_create_type(coo, "B");
+    CooAlloc *B_alloc = coo_get_alloc(coo, B_type);
+    coo_add_var(B_type, "c", &CooI8);
+    coo_add_var(B_type, "a", A_type);
+    coo_add_var(B_type, "d", &CooF64);
+
+    coo_begin_update(coo);
+    coo_end_update(coo);
+
+    B1 *b1 = coo_alloc(B_alloc, 1);
+    b1->c = 1;
+    b1->a.c = 2;
+    b1->a.i[0] = 3;
+    b1->a.s = 4;
+    b1->d = 5.0;
+
+    typedef struct {
+        short s;
+        int i;
+    } A2;
+
+    typedef struct {
+        char c;
+        double d;
+        A2 a[10];
+    } B2;
+
+    coo_remove_var(A_type, "c");
+    coo_move_var(A_type, "i", 1);
+    coo_resize_array(A_type, "i", 1);
+    coo_move_var(B_type, "d", 1);
+    coo_resize_array(B_type, "a", 10);
+
+    coo_begin_update(coo);
+    B2 *b2 = coo_update_pointer(b1);
+    coo_end_update(coo);
+
+    assert(b2->c == 1);
+    assert(b2->a[0].i == 3);
+    assert(b2->a[0].s == 4);
+    assert(b2->d == 5.0);
+
+    coo_destroy_state(coo);
+}
+
+void coo_test_alloc() {
+    coo_test_basics();
+    coo_test_pointers();
+    coo_test_struct_composition();
 }

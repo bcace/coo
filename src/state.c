@@ -62,7 +62,14 @@ CooState *coo_create_state() {
     return s;
 }
 
+static void _delete_alloc(CooAlloc *a) {
+    _clear_alloc(a);
+    free(a);
+}
+
 void coo_destroy_state(CooState *s) {
+    for (int i = 0; i < s->allocs_count; ++i)
+        _delete_alloc(s->allocs[i]);
     free(s);
 }
 
@@ -75,10 +82,17 @@ CooType *coo_create_type(CooState *s, const char *name) {
     return s->types[s->types_count++] = type;
 }
 
-static CooAlloc *_get_alloc(CooState *s, CooType *type, CooIndirection indirection) {
+static int _index_of_alloc(CooState *s, CooType *type, CooIndirection indirection) {
     for (int i = 0; i < s->allocs_count; ++i)
         if (s->allocs[i]->type == type && s->allocs[i]->indirection == indirection)
-            return s->allocs[i];
+            return i;
+    return -1;
+}
+
+static CooAlloc *_get_alloc(CooState *s, CooType *type, CooIndirection indirection) {
+    int index = _index_of_alloc(s, type, indirection);
+    if (index != -1)
+        return s->allocs[index];
     assert(s->allocs_count < COO_MAX_ALLOCS);
     CooAlloc *alloc = malloc(sizeof(CooAlloc));
     _init_alloc(alloc, type, indirection);
@@ -91,6 +105,19 @@ CooAlloc *coo_get_alloc(CooState *s, CooType *type) {
 
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type) {
     return _get_alloc(s, type, IT_MPTR);
+}
+
+void coo_remove_alloc(CooState *s, CooType *type, CooIndirection indirection) {
+    int index = _index_of_alloc(s, type, indirection);
+    if (index == -1)
+        return;
+    _delete_alloc(s->allocs[index]);
+    for (int i = index + 1; i < s->allocs_count; ++i)
+        s->allocs[i - 1] = s->allocs[i];
+}
+
+void coo_clear_alloc(CooAlloc *a) {
+    _clear_alloc(a);
 }
 
 void coo_begin_update(CooState *s) {

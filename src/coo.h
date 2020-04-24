@@ -13,6 +13,10 @@ CooType *coo_create_type(CooState *s, const char *name);
 CooAlloc *coo_get_alloc(CooState *s, CooType *type);
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type);
 
+void coo_remove_alloc(CooState *s, CooType *type);
+void coo_remove_ptr_alloc(CooState *s, CooType *type);
+void coo_clear_alloc(CooAlloc *a);
+
 void coo_begin_update(CooState *s);
 void coo_end_update(CooState *s);
 void *coo_update_pointer(void *ptr);

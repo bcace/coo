@@ -80,6 +80,7 @@ typedef struct CooAlloc {
 } CooAlloc;
 
 void _init_alloc(CooAlloc *a, CooType *type, CooIndirection indirection);
+void _clear_alloc(CooAlloc *a);
 void _update_alloc_data_layout(CooAlloc *a);
 void _update_alloc_pointers(CooAlloc *a);
 void _free_old_versions_of_data(CooAlloc *a);
