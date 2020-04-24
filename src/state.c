@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 #include <inttypes.h>
 
 
@@ -119,39 +120,47 @@ void coo_remove_type(CooState *s, const char *name) {
     --s->types_count;
 }
 
-static int _index_of_alloc(CooState *s, CooType *type, CooIndirection indirection) {
+static int _index_of_alloc(CooState *s, CooType *type, int is_ptr) {
     for (int i = 0; i < s->allocs_count; ++i)
-        if (s->allocs[i]->type == type && s->allocs[i]->indirection == indirection)
+        if (s->allocs[i]->type == type && s->allocs[i]->is_ptr == is_ptr)
             return i;
     return -1;
 }
 
-static CooAlloc *_get_alloc(CooState *s, CooType *type, CooIndirection indirection) {
-    int index = _index_of_alloc(s, type, indirection);
+static CooAlloc *_get_alloc(CooState *s, CooType *type, int is_ptr) {
+    int index = _index_of_alloc(s, type, is_ptr);
     if (index != -1)
         return s->allocs[index];
     assert(s->allocs_count < COO_MAX_ALLOCS);
     CooAlloc *alloc = malloc(sizeof(CooAlloc));
-    _init_alloc(alloc, type, indirection);
+    _init_alloc(alloc, type, is_ptr);
     return s->allocs[s->allocs_count++] = alloc;
 }
 
 CooAlloc *coo_get_alloc(CooState *s, CooType *type) {
-    return _get_alloc(s, type, IT_VAL);
+    return _get_alloc(s, type, false);
 }
 
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type) {
-    return _get_alloc(s, type, IT_PTR);
+    return _get_alloc(s, type, true);
 }
 
-void coo_remove_alloc(CooState *s, CooType *type, CooIndirection indirection) {
-    int index = _index_of_alloc(s, type, indirection);
+static void _remove_alloc(CooState *s, CooType *type, int is_ptr) {
+    int index = _index_of_alloc(s, type, is_ptr);
     if (index == -1)
         return;
     _delete_alloc(s->allocs[index]);
     for (int i = index + 1; i < s->allocs_count; ++i)
         s->allocs[i - 1] = s->allocs[i];
     --s->allocs_count;
+}
+
+void coo_remove_alloc(CooState *s, CooType *type) {
+    _remove_alloc(s, type, false);
+}
+
+void coo_remove_ptr_alloc(CooState *s, CooType *type) {
+    _remove_alloc(s, type, true);
 }
 
 void coo_clear_alloc(CooAlloc *a) {

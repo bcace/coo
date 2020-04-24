@@ -20,19 +20,13 @@ typedef enum {
     CDT_NULL, /* new variable or new array elements of old variable */
 } CooDiffType;
 
-typedef enum {
-    IT_VAL, /* no indirection, value */
-    IT_PTR, /* managed pointer */
-    IT_FPTR, /* fixed pointer */
-} CooIndirection;
-
 typedef struct CooDiff {
     CooDiffType diff_type;
     struct CooType *to_type;
     CooCast *cast;
     int src_offset, dst_offset;
     int src_stride, dst_stride;
-    CooIndirection indirection;
+    int is_ptr;
     int count;
 } CooDiff;
 
@@ -40,7 +34,7 @@ typedef struct CooVar {
     char name[COO_MAX_NAME];
     struct CooType *type;
     int count; /* int var[count]; */
-    CooIndirection indirection;
+    int is_ptr;
     int offset; /* derived, in bytes */
     int old_index;
 } CooVar;
@@ -74,12 +68,12 @@ typedef struct CooTag {
 
 typedef struct CooAlloc {
     CooType *type;
-    CooIndirection indirection;
     CooTag *first;
     CooTag *old_first; /* only used between update begin and end */
+    int is_ptr;
 } CooAlloc;
 
-void _init_alloc(CooAlloc *a, CooType *type, CooIndirection indirection);
+void _init_alloc(CooAlloc *a, CooType *type, int is_ptr);
 void _clear_alloc(CooAlloc *a);
 void _update_alloc_data_layout(CooAlloc *a);
 void _update_alloc_pointers(CooAlloc *a);
