@@ -76,25 +76,20 @@ static void _apply_diffs(CooType *t, char *src_mem, char *dst_mem) {
     }
 }
 
-static CooTag *_malloc_with_tag(int size, int count) {
+static CooTag *_malloc_with_tag(int size, int count, CooTag *prev, CooTag *next) {
     CooTag *tag = malloc(sizeof(CooTag) + size * count);
     tag->count = count;
+    tag->prev = prev;
+    tag->next = next;
     return tag;
 }
 
 void _update_alloc_data_layout(CooAlloc *a) {
     CooTag *o_tag = a->first;
-    if (a->indirection != IT_VAL || a->type->is_fixed) {
+    if (a->indirection == IT_VAL && a->type->is_fixed == false) {
         while (o_tag) {
-            o_tag->redirect = o_tag; /* redirect to itself because it will not be reallocated */
-            o_tag = o_tag->next;
-        }
-    }
-    else {
-        while (o_tag) {
-            CooTag *n_tag = _malloc_with_tag(a->type->size, o_tag->count);
-            n_tag->prev = o_tag->prev;
-            n_tag->next = o_tag->next;
+            CooTag *n_tag = _malloc_with_tag(a->type->size, o_tag->count,
+                                             o_tag->prev, o_tag->next);
             for (int i = 0; i < o_tag->count; ++i)
                 _apply_diffs(a->type,
                              (char *)_tag_to_data(o_tag) + a->type->old_size * i,
@@ -202,40 +197,47 @@ void _update_type_layout(CooType *t, int update_id) {
     t->vars_count = t->new_vars_count;
 }
 
-static void _redirect_pointers(char *mem, CooType *type, int count, CooIndirection indirection) {
-    if (indirection == IT_MPTR) { /* pointers */
-        for (int i = 0; i < count; ++i) {
-            *(void **)mem = _update_pointer(*(void **)mem);
-            mem += sizeof(void *);
-        }
+static void _redirect_pointers(char *mem, int count) {
+    for (int i = 0; i < count; ++i) {
+        *(void **)mem = _update_pointer(*(void **)mem);
+        mem += sizeof(void *);
     }
-    else if (indirection == IT_VAL && type->vars_count) { /* structs that might contain pointers */
-        for (int i = 0; i < count; ++i) {
-            for (int j = 0; j < type->vars_count; ++j) {
-                CooVar *v = type->vars + j;
-                _redirect_pointers(mem + v->offset, v->type, v->count, v->indirection);
-            }
-            mem += type->size;
+}
+
+static void _redirect_struct_pointers(char *mem, CooType *type, int count, CooIndirection indirection) {
+    if (type->vars_count == 0)
+        return;
+    for (int i = 0; i < count; ++i) {
+        for (int j = 0; j < type->vars_count; ++j) {
+            CooVar *v = type->vars + j;
+            if (v->indirection == IT_MPTR)
+                _redirect_pointers(mem + v->offset, v->count);
+            else if (v->indirection == IT_VAL)
+                _redirect_struct_pointers(mem + v->offset, v->type, v->count, v->indirection);
         }
+        mem += type->size;
     }
 }
 
 void _update_alloc_pointers(CooAlloc *a) {
-    if (a->indirection == IT_MPTR || a->type->is_fixed) { /* just update pointers */
-        CooTag *tag = a->first;
-        while (tag) {
-            _redirect_pointers((char *)_tag_to_data(tag), a->type, tag->count, a->indirection);
-            tag = tag->next;
-        }
+    if (a->indirection == IT_MPTR) { /* pointers to managed data */
+        for (CooTag *tag = a->first; tag; tag = tag->next)
+            _redirect_pointers((char *)_tag_to_data(tag), tag->count);
     }
-    else if (a->indirection == IT_VAL) { /* update pointers and tag links */
-        a->old_first = a->first;
-        CooTag *n_tag = a->first = a->first ? a->first->redirect : 0;
-        while (n_tag) {
-            n_tag->prev = n_tag->prev ? n_tag->prev->redirect : 0;
-            n_tag->next = n_tag->next ? n_tag->next->redirect : 0;
-            _redirect_pointers((char *)_tag_to_data(n_tag), a->type, n_tag->count, a->indirection);
-            n_tag = n_tag->next;
+    else if (a->indirection == IT_VAL) { /* structs */
+        if (a->type->is_fixed) { /* unmanaged structs */
+            for (CooTag *tag = a->first; tag; tag = tag->next)
+                _redirect_struct_pointers((char *)_tag_to_data(tag), a->type, tag->count, a->indirection);
+        }
+        else { /* managed structs */
+            a->old_first = a->first; /* for freeing old data later */
+            CooTag *tag = a->first = a->first ? a->first->redirect : 0;
+            while (tag) {
+                tag->prev = tag->prev ? tag->prev->redirect : 0;
+                tag->next = tag->next ? tag->next->redirect : 0;
+                _redirect_struct_pointers((char *)_tag_to_data(tag), a->type, tag->count, a->indirection);
+                tag = tag->next;
+            }
         }
     }
 }
@@ -358,9 +360,7 @@ void *coo_alloc(CooAlloc *a, int count) {
     if (count <= 0)
         return 0;
     int size = (a->indirection != IT_VAL) ? sizeof(void *) : a->type->size;
-    CooTag *tag = _malloc_with_tag(size, count);
-    tag->prev = 0;
-    tag->next = a->first;
+    CooTag *tag = _malloc_with_tag(size, count, 0, a->first);
     if (a->first)
         a->first->prev = tag;
     a->first = tag;

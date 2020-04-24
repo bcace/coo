@@ -192,7 +192,7 @@ void coo_test_alloc() {
     coo_move_var(A_type, "a", 0);
     coo_begin_update(coo);
     a7_root = coo_update_pointer(a8_root);
-    A7 **v7 = coo_update_pointer(v8);
+    A7 **v7 = (A7 **)v8; /* array of pointers is not updateable, just cast */
     coo_end_update(coo);
 
     for (int i = 0; i < 10; ++i)

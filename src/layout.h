@@ -66,8 +66,10 @@ void _update_type_layout(CooType *t, int update_id);
 
 typedef struct CooTag {
     struct CooTag *prev, *next;
-    struct CooTag *redirect; /* only used during data layout update */
-    int count; /* elements in the allocated batch */
+    union {
+        int count; /* elements in the allocated batch */
+        struct CooTag *redirect; /* only used during data layout update */
+    };
 } CooTag;
 
 typedef struct CooAlloc {
