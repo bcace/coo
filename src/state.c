@@ -67,19 +67,56 @@ static void _delete_alloc(CooAlloc *a) {
     free(a);
 }
 
+static void _delete_type(CooType *t) {
+    free(t);
+}
+
 void coo_destroy_state(CooState *s) {
     for (int i = 0; i < s->allocs_count; ++i)
         _delete_alloc(s->allocs[i]);
+    s->allocs_count = 0;
+    for (int i = 0; i < s->types_count; ++i)
+        _delete_type(s->types[i]);
+    s->types_count = 0;
     free(s);
 }
 
-CooType *coo_create_type(CooState *s, const char *name) {
+static int _find_type(CooState *s, const char *name) {
     for (int i = 0; i < s->types_count; ++i)
-        assert(strcmp(name, s->types[i]->name) != 0);
+        if (strcmp(name, s->types[i]->name) == 0)
+            return i;
+    return -1;
+}
+
+CooType *coo_create_type(CooState *s, const char *name) {
+    assert(_find_type(s, name) == -1);
     assert(s->types_count < COO_MAX_TYPES);
     CooType *type = malloc(sizeof(CooType));
     _init_type(type, name, 0);
     return s->types[s->types_count++] = type;
+}
+
+static void _remove_allocs_of_type(CooState *s, CooType *type) {
+    int removed = 0;
+    for (int i = 0; i < s->allocs_count; ++i)
+        if (s->allocs[i]->type == type) {
+            _delete_alloc(s->allocs[i]);
+            ++removed;
+        }
+        else if (removed)
+            s->allocs[i - removed] = s->allocs[i];
+    s->allocs_count -= removed;
+}
+
+void coo_remove_type(CooState *s, const char *name) {
+    int index = _find_type(s, name);
+    if (index == -1)
+        return;
+    _delete_type(s->types[index]);
+    _remove_allocs_of_type(s, s->types[index]);
+    for (int i = index + 1; i < s->types_count; ++i)
+        s->types[i - 1] = s->types[i];
+    --s->types_count;
 }
 
 static int _index_of_alloc(CooState *s, CooType *type, CooIndirection indirection) {
@@ -114,6 +151,7 @@ void coo_remove_alloc(CooState *s, CooType *type, CooIndirection indirection) {
     _delete_alloc(s->allocs[index]);
     for (int i = index + 1; i < s->allocs_count; ++i)
         s->allocs[i - 1] = s->allocs[i];
+    --s->allocs_count;
 }
 
 void coo_clear_alloc(CooAlloc *a) {

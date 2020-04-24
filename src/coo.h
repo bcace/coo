@@ -10,9 +10,9 @@ CooState *coo_create_state();
 void coo_destroy_state(CooState *s);
 
 CooType *coo_create_type(CooState *s, const char *name);
+void coo_remove_type(CooState *s, const char *name);
 CooAlloc *coo_get_alloc(CooState *s, CooType *type);
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type);
-
 void coo_remove_alloc(CooState *s, CooType *type);
 void coo_remove_ptr_alloc(CooState *s, CooType *type);
 void coo_clear_alloc(CooAlloc *a);
