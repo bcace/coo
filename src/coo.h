@@ -6,13 +6,24 @@ typedef struct CooState CooState;
 typedef struct CooType CooType;
 typedef struct CooAlloc CooAlloc;
 
+/* create coo state */
 CooState *coo_create_state();
+
+/* destroy coo state */
 void coo_destroy_state(CooState *s);
 
+/* create struct type */
 CooType *coo_create_type(CooState *s, const char *name);
+
+/* remove existing struct type */
 void coo_remove_type(CooState *s, const char *name);
+
+/* alloc containing structs and arrays of structs */
 CooAlloc *coo_get_alloc(CooState *s, CooType *type);
+
+/* alloc containing pointers and arrays of pointers to managed data */
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type);
+
 void coo_remove_alloc(CooState *s, CooType *type);
 void coo_remove_ptr_alloc(CooState *s, CooType *type);
 void coo_clear_alloc(CooAlloc *a);

@@ -218,7 +218,7 @@ static void _redirect_struct_pointers(char *mem, CooType *type, int count, CooIn
     for (int i = 0; i < count; ++i) {
         for (int j = 0; j < type->vars_count; ++j) {
             CooVar *v = type->vars + j;
-            if (v->indirection == IT_MPTR)
+            if (v->indirection == IT_PTR)
                 _redirect_pointers(mem + v->offset, v->count);
             else if (v->indirection == IT_VAL)
                 _redirect_struct_pointers(mem + v->offset, v->type, v->count, v->indirection);
@@ -228,7 +228,7 @@ static void _redirect_struct_pointers(char *mem, CooType *type, int count, CooIn
 }
 
 void _update_alloc_pointers(CooAlloc *a) {
-    if (a->indirection == IT_MPTR) { /* pointers to managed data */
+    if (a->indirection == IT_PTR) { /* pointers to managed data */
         for (CooTag *tag = a->first; tag; tag = tag->next)
             _redirect_pointers((char *)_tag_to_data(tag), tag->count);
     }
@@ -301,19 +301,19 @@ void coo_ins_arr(CooType *t, const char *v_name, CooType *v_type, int v_count, i
 }
 
 void coo_add_ptr_var(CooType *t, const char *v_name, CooType *v_type) {
-    _add_var(t, v_name, v_type, 1, -1, IT_MPTR);
+    _add_var(t, v_name, v_type, 1, -1, IT_PTR);
 }
 
 void coo_ins_ptr_var(CooType *t, const char *v_name, CooType *v_type, int v_index) {
-    _add_var(t, v_name, v_type, 1, v_index, IT_MPTR);
+    _add_var(t, v_name, v_type, 1, v_index, IT_PTR);
 }
 
 void coo_add_ptr_arr(CooType *t, const char *v_name, CooType *v_type, int v_count) {
-    _add_var(t, v_name, v_type, v_count, -1, IT_MPTR);
+    _add_var(t, v_name, v_type, v_count, -1, IT_PTR);
 }
 
 void coo_ins_ptr_arr(CooType *t, const char *v_name, CooType *v_type, int v_count, int v_index) {
-    _add_var(t, v_name, v_type, v_count, v_count, IT_MPTR);
+    _add_var(t, v_name, v_type, v_count, v_count, IT_PTR);
 }
 
 static int _variable_index(CooVar *vars, int vars_count, const char *v_name) {

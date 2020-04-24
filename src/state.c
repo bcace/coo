@@ -141,7 +141,7 @@ CooAlloc *coo_get_alloc(CooState *s, CooType *type) {
 }
 
 CooAlloc *coo_get_ptr_alloc(CooState *s, CooType *type) {
-    return _get_alloc(s, type, IT_MPTR);
+    return _get_alloc(s, type, IT_PTR);
 }
 
 void coo_remove_alloc(CooState *s, CooType *type, CooIndirection indirection) {

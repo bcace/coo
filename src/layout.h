@@ -22,8 +22,8 @@ typedef enum {
 
 typedef enum {
     IT_VAL, /* no indirection, value */
-    IT_PTR, /* regular pointer, not updated */
-    IT_MPTR, /* managed pointer, updated */
+    IT_PTR, /* managed pointer */
+    IT_FPTR, /* fixed pointer */
 } CooIndirection;
 
 typedef struct CooDiff {
@@ -68,7 +68,7 @@ typedef struct CooTag {
     struct CooTag *prev, *next;
     union {
         int count; /* elements in the allocated batch */
-        struct CooTag *redirect; /* only used during data layout update */
+        struct CooTag *redirect; /* only used between update begin and end */
     };
 } CooTag;
 
