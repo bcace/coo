@@ -42,10 +42,10 @@ void coo_ins_ptr_var(CooType *t, const char *v_name, CooType *v_type, int v_inde
 void coo_add_ptr_arr(CooType *t, const char *v_name, CooType *v_type, int v_count);
 void coo_ins_ptr_arr(CooType *t, const char *v_name, CooType *v_type, int v_count, int v_index);
 
-void coo_remove_var(CooType *type, const char *var_name);
-void coo_resize_array(CooType *type, const char *var_name, int length);
-void coo_move_var(CooType *type, const char *var_name, int position);
-void coo_retype_var(CooType *type, const char *var_name, CooType *to_type);
+void coo_remove_var(CooType *t, const char *var_name);
+void coo_resize_array(CooType *t, const char *var_name, int length);
+void coo_move_var(CooType *t, const char *var_name, int position);
+void coo_retype_var(CooType *t, const char *var_name, CooType *to_type);
 
 void *coo_alloc(CooAlloc *a, int count);
 void coo_free(CooAlloc *a, void *data);

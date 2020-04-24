@@ -153,6 +153,7 @@ void _update_type_layout(CooType *t, int update_id) {
         v->offset = _round_up(t->size, _variable_alignment(v));
 
         if (v->old_index == -1) { /* new variable */
+            assert(t->diffs_count < COO_MAX_DIFFS);
             CooDiff *d = t->diffs + t->diffs_count++;
             d->diff_type = CDT_NULL;
             d->dst_offset = v->offset;
@@ -164,6 +165,7 @@ void _update_type_layout(CooType *t, int update_id) {
             CooVar *old_v = t->vars + v->old_index;
             int copied_count = _min(v->count, old_v->count);
             if (v->type != old_v->type) { /* type changed, cast variable value(s) if cast exists */
+                assert(t->diffs_count < COO_MAX_DIFFS);
                 CooDiff *d = t->diffs + t->diffs_count++;
                 d->diff_type = CDT_CAST;
                 d->src_offset = old_v->offset;
@@ -175,6 +177,7 @@ void _update_type_layout(CooType *t, int update_id) {
                 d->indirection = v->indirection;
             }
             else { /* type remained same, copy variable value(s) */
+                assert(t->diffs_count < COO_MAX_DIFFS);
                 CooDiff *d = t->diffs + t->diffs_count++;
                 d->diff_type = CDT_COPY;
                 d->src_offset = old_v->offset;
@@ -186,6 +189,7 @@ void _update_type_layout(CooType *t, int update_id) {
                 d->indirection = v->indirection;
             }
             if (v->count > old_v->count) { /* new array value(s), initialize to 0 */
+                assert(t->diffs_count < COO_MAX_DIFFS);
                 CooDiff *d = t->diffs + t->diffs_count++;
                 d->diff_type = CDT_NULL;
                 d->dst_offset = v->offset + old_v->count * _variable_size(v);
@@ -270,7 +274,8 @@ static void _init_var(CooVar *v, const char *name, CooType *t, int count, CooInd
 
 static void _add_var(CooType *t, const char *v_name, CooType *v_type,
                      int v_count, int v_index, int v_is_pointer) {
-    assert(t->diffs_count < COO_MAX_DIFFS); /* no room for another variable */
+    assert(t->is_fixed == false);
+    assert(t->new_vars_count < COO_MAX_VARS); /* no room for another variable */
     for (int i = 0; i < t->vars_count; ++i)
         assert(strcmp(v_name, t->vars[i].name) != 0); /* no old variable with same name */
     for (int i = 0; i < t->new_vars_count; ++i)
@@ -357,8 +362,8 @@ void coo_move_var(CooType *t, const char *v_name, int new_index) {
 }
 
 void coo_retype_var(struct CooType *t, const char *v_name, struct CooType *to_type) {
-    assert(to_type != 0);
     assert(t->is_fixed == false);
+    assert(to_type != 0);
     int index = _variable_index(t->new_vars, t->new_vars_count, v_name);
     assert(index != -1); /* variable not found */
     t->new_vars[index].type = to_type;
