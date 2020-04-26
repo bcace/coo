@@ -1,7 +1,5 @@
 # Coo
 
----
-
 ## What is Coo?
 
 Coo is an attempt at having hot-reloadable struct field layouts for [POD](https://en.wikipedia.org/wiki/Passive_data_structure) style data.
@@ -9,8 +7,6 @@ Coo is an attempt at having hot-reloadable struct field layouts for [POD](https:
 Some compiled statically typed languages either already have the ability to hot-reload code, or are working on it (see Links in the paragraph at the bottom), but as far as I can see the limitation is still that code changes should not include changes to struct layouts of the program's live state (adding, moving, removing and/or modifying struct fields).
 
 I believe that a mechanism for updating struct layouts of live data would make hot-reloading code even more attractive, especially since I had to implement limited versions of this mechanisms at my job and in some of my private projects.
-
----
 
 ## How does it work?
 
@@ -63,8 +59,6 @@ assert(a1->b == 2);
 
 (pointers, stack pointers, in-pointers, out-pointers)
 
----
-
 ## What's missing?
 
 * Update data of only affected types.
@@ -74,8 +68,6 @@ assert(a1->b == 2);
 * Unions and bit fields.
 * Demo language with x64 code generator and a simple REPL for demoing.
 * Managed pointers inside structs and arrays.
-
----
 
 ## Links
 
