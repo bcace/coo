@@ -4,9 +4,9 @@
 
 Coo is an attempt at having hot-reloadable field layouts for [POD](https://en.wikipedia.org/wiki/Passive_data_structure) style data.
 
-Compiled and statically typed languages either already have the ability to hot-reload code, or are working to add it, but as far as I can see the limitation is still that reloaded code cannot contain changes to struct layouts of the program's live state (adding, moving, removing and/or modifying fields in a struct) since this would lead to executable code that assumes layouts that are different from what's in the actual state.
+Compiled and statically typed languages either already have the ability to hot-reload code, or are working to add it, but as far as I can see the limitation is still that reloaded code cannot contain changes to struct layouts of the program's live state (adding, moving, removing and/or modifying fields in a struct) since this would lead to inconsistency between layouts that the reloaded code assumes and layouts in the actual state, or in other words a break in backward compatibility.
 
-Of course not all layout changes can be resolved automatically with a mechanism like this and there is a whole spectrum of cases with data upgrades between releases of a program at one extreme, and on the other, in an embedded scripting situation where code changes are supposed to be done while the host program is running, expected layout changes are smaller and submitted more often. In my experience this makes it more likely that these updates can be done automatically, and if out of 10 changes to code 5 change data layouts, and 3 of those can be handled automatically this is still a significant help for programmers.
+Since Coo is trying to perform data upgrade automatically the number of cases where it can do a decent job is still limited, but in my experience in [embedded scripting](https://en.wikipedia.org/wiki/Scripting_language#Extension/embeddable_languages) situations this number can be significant since code changes are usually submitted more often and layout changes tend to be smaller.
 
 ## How does it work?
 
