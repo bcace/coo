@@ -2,62 +2,48 @@
 
 ## What is Coo?
 
-Coo is an attempt at having hot-reloadable struct field layouts for [POD](https://en.wikipedia.org/wiki/Passive_data_structure) style data.
+Coo is an attempt at having hot-reloadable field layouts for [POD](https://en.wikipedia.org/wiki/Passive_data_structure) style data.
 
-Some compiled statically typed languages either already have the ability to hot-reload code, or are working on it (see Links in the paragraph at the bottom), but as far as I can see the limitation is still that code changes should not include changes to struct layouts of the program's live state (adding, moving, removing and/or modifying struct fields).
+Compiled and statically typed languages either already have the ability to hot-reload code, or are working to add it, but as far as I can see the limitation is still that reloaded code cannot contain changes to struct layouts of the program's live state (adding, moving, removing and/or modifying fields in a struct) since this would lead to executable code that assumes layouts that are different from what's in the actual state.
 
-I believe that a mechanism for updating struct layouts of live data would make hot-reloading code even more attractive, especially since I had to implement limited versions of this mechanisms at my job and in some of my private projects.
+Of course not all layout changes can be resolved automatically with a mechanism like this and there is a whole spectrum of cases with data upgrades between releases of a program at one extreme, and on the other, in an embedded scripting situation where code changes are supposed to be done while the host program is running, expected layout changes are smaller and submitted more often. In my experience this makes it more likely that these updates can be done automatically, and if out of 10 changes to code 5 change data layouts, and 3 of those can be handled automatically this is still a significant help for programmers.
 
 ## How does it work?
 
-First, Coo has to know what all the struct layouts look like. Then all the data must be allocated and freed through Coo, which ensures that Coo knows where all the data of a certain type is. When a struct layout is changed Coo can go through all affected data, create a new version of each struct or array of structs, and then redirect all the pointers so the entire state is still valid. Update is separated into two calls (```coo_begin_update``` and ```coo_end_update```) so that all the outside pointers pointing to the managed data have the opportunity to be updated.
-
-(a few simple examples, fields, arrays, composition, implicit casts)
+**Coo has to know about all types and their layouts**
 
 ```C
-/* initial layout */
-struct A1 {
+CooType *my_type = coo_create_type(coo_state, "MyType");
+coo_add_var(my_type, "a", &CooI32);
+coo_add_var(my_type, "b", &CooF64);
+
+/* is equivalent to */
+
+struct MyType {
     int a;
-    int b;
+    double b;
 };
+```
+**All data is allocated through Coo**
 
-/* describe the A1 type layout to Coo */
-CooType *A_type = coo_create_type(coo, "A");
-coo_add_var(A_type, "a", &CooI32);
-coo_add_var(A_type, "b", &CooI32);
-
-/* commit the new type layout */
-coo_begin_update(coo);
-coo_end_update(coo);
-
-/* make an allocator for type A */
-CooAlloc *A_alloc = coo_get_alloc(coo, A_type);
-
-/* allocate one struct of that type and initialize its fields */
-A1 *a1 = (A1 *)coo_alloc(A_alloc, 1);
-a1->a = 1;
-a1->b = 2;
-
-/* modified layout (swapped fields) */
-struct A2 {
-    int b;
-    int a;
-};
-
-/* describe the layout change to Coo (move "b" field to position 0) */
-coo_move_var(A_type, "b", 0);
-
-/* update layout of allocated object */
-coo_begin_update(coo);
-A2 *a2 = coo_update_pointer(a1);
-coo_end_update(coo);
-
-/* verify that the data in fields is still intact */
-assert(a1->a == 1);
-assert(a1->b == 2);
+```C
+CooAlloc *my_alloc = coo_get_alloc(coo_state, my_type);
+MyType *my_struct = coo_alloc(my_alloc, 1);
 ```
 
-(pointers, stack pointers, in-pointers, out-pointers)
+**Coo duplicates data with all the appropriate changes**
+
+**Coo updates pointers**
+
+**Coo deletes old data**
+
+First, Coo has to know what all the struct layouts look like. Then all the data must be allocated and freed through Coo, which ensures that Coo knows where all the data of a certain type is. When a struct layout is changed Coo can go through all affected data, create a new version of each struct or array of structs, and then redirect all the pointers so the entire state is still valid. Update is separated into two calls (```coo_begin_update``` and ```coo_end_update```) so that all the outside pointers pointing to the managed data have the opportunity to be updated.
+
+((just describe what's possible and where to find it in code (test.c)))
+
+    (a few simple examples, fields, arrays, composition, implicit casts)
+
+    (pointers, stack pointers, in-pointers, out-pointers)
 
 ## What's missing?
 
@@ -68,11 +54,3 @@ assert(a1->b == 2);
 * Unions and bit fields.
 * Demo language with x64 code generator and a simple REPL for demoing.
 * Managed pointers inside structs and arrays.
-
-## Links
-
-* [Nim](https://nim-lang.org/docs/hcr.html)
-* [Mun](https://mun-lang.org/)
-* [Zig](https://github.com/ziglang/zig/issues/68)
-* [Live++](https://liveplusplus.tech/)
-* [Projucer](https://juce.com/discover/projucer)
